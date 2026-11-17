@@ -136,7 +136,13 @@ The stored procedure therefore works **if it does three extra things**:
    - Two linked servers. Without a distributed transaction, the Rate Engine and the replica can drift, so track a per-row `ReplicaStatus`.
 
 ## 9c. The enrollment bulk import (CustomerDataImport.vb) and what it means for Plan Z
-- The import **never sets IsRateEngineAccount**; only the enrollment screen checkbox does. Autocomplete publishes the account to the rate engine only when that flag is on (`AutoEnroll.vb:1061`).
+- Correction, verified 17 Nov. IsRateEngineAccount is set by:
+  - the **API enrollment** (`Integrations/.../CustomerService.cs:785`), as "ProductId is not blank";
+  - **API meter add/update** (`MeterService.SyncRateEngineAccountFlag`), for both inbound and master records;
+  - the **Service Location page** checkbox (`CusSvcLocationsD.aspx.vb:4414`); turning it on there publishes the account to the rate engine (around line 5399);
+  - the **New Enrollment page** checkbox (`NewCusEnroll.aspx.vb:6572`).
+  `AutoEnroll.vb:1596` copies the flag from inbound to master.
+- The **file import (CustomerDataImport.vb) is the only enrollment path that never sets it**, even when the product validates. Suggested fix: mirror the API rule (flag = product present and validated). Autocomplete publishes the account to the rate engine only when the flag is on (`AutoEnroll.vb:1061`).
   - So imported Engie enrollments create **no** Rate Engine Account, AccountAttribute or AccountMapping.
   - The same flag also drives rate-engine billing (`Stage2MeterReadings`, `StandardEnergyCharge`, `BillRegEdit`).
 - **Decision needed: who owns Account and AccountMapping in the Rate Engine?**
